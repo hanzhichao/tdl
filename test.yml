@@ -1,0 +1,11 @@
+settings:
+
+
+variables:
+
+
+testcases:
+  get chain config:
+    steps:
+      print  hello,world
+

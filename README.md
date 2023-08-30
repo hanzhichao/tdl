@@ -29,6 +29,8 @@ Tests Description Language
   - 项目路径: @/utils/utils.py
   - 相对路径: ./db.py
 
+  
+
 ```yaml
 # 配置<dict>
 config: 
@@ -43,5 +45,178 @@ tests:
 ```
 
 
+## 模型设计
+- TestCase
+- Step
+- Data
+- TestSuite
+- TestReport
+
+```json
+{
+  "name": "testsuite_01",
+  "description": "testsuite description",
+  "filter": {
+    "tags": [],
+    "priorities": [],
+    "status": [],
+    "owner": []
+  },
+  "tags": [],
+  "priority": 0,
+  "setup": [],
+  "teardown": [],
+  "setup_suite": [],
+  "teardown_suite": [],
+  "tests": [
+    {"id": "testsuite_01", "name": "testcase_01"},
+    {"id": "testsuite_02", "name": "testcase_02"},
+    {"id": "testsuite_03", "name": "testcase_03"}
+  ]
+}
 
 
+```
+
+
+### 测试用例
+TestCase
+- feature
+- title/ scenario / summary
+- description: Optional[str]
+- tags
+- priority
+- status: 实现中/Ready 当前状态
+- timeout: 可继承运行参数
+- owner
+- ddt：可继承运行参数
+- setup
+- teardown
+- skip: 跳过条件
+- xfail：预期失败
+- rerun / retry/ repeat /times: 失败重试/无条件重试(repeat) 可继承运行参数
+- 上次运行状态/时间 总体状态 / 平均执行时间
+- state: 关联阶段 Prod/Test/Stage
+- type: 用例类型 接口/性能/WebUI/AppUI
+- related_requirement：关联需求
+- order执行顺序
+
+## 用例
+```json
+{
+  "name": "test_api_demo",
+  "description": "test description",
+  "priority": 1,
+  "tags": ["http", "api-test"],
+  "timeout": 100,
+  "setup": [
+    {"method": "Http.Get", "args": {"url": "/get","params":  {"a": 1, "b": 2, "c": 3}}}
+  ],
+  "teardown": [
+     {"method": "Http.Get", "args": {"url": "/get","params":  {"a": 1, "b": 2, "c": 3}}}
+  ],
+  "steps": [
+    {"method": "Http.Get", "args": {"url": "/get","params":  {"a": 1, "b": 2, "c": 3}}},
+    {"method": "Http.Post", "args": {"url": "/post", "json":  {"name": "Kevin"}}},
+    {"method": "Http.Get", "args": {"url": "/get", "params":  {"a": 1, "b": 2, "c": 3}}, 
+      "store": {"url": "$.url"}, "excepted": {"eq": ["$url", "/get"]}}
+  ]
+}
+
+```
+```json
+{
+  "name": "test_web_ui_demo",
+  "description": "test description",
+  "steps": [
+    {"method": "Page.Open", "args": ["https://www.baidu.com/"]},
+    {"method": "Page.InputTo", "args": ["id","kw", "helloworld"], "register": {"value1": "//[@id=\"kw\"]/@value"}},
+    {"method": "Page.Click", "args": ["id","su"]}
+  ]
+}
+
+```
+
+```json
+{
+  "name": "test_ssh_demo",
+  "description": "test description",
+  "steps": [
+    {"method": "SSH.Execute", "args": "echo hello"},
+    {"method": "SSH.GET", "args": ["/path/a.txt", "/local_path/a.txt"]}
+  ]
+}
+
+```
+```json
+{
+  "name": "test_mysql_demo",
+  "description": "test description",
+  "steps": [
+    {"method": "MySQL.Query", "args": "SELECT * FROM `users`"},
+    {"method": "MySQL.Execute", "args": "INSERT INTO `users` (\"name\") VALUES(\"KEVIN\")"}
+  ]
+}
+
+```
+
+## TestReport
+```json
+{
+  "name": "test_report",
+  "summary": {
+    "start_at": "2015-02-03 12:00:00.000",
+    "end_at": "2015-02-03 12:01:00.00",
+    "total": 12
+  },
+  "details": [
+    {}
+  ]
+  
+}
+```
+
+
+
+RF TestCase
+[Documentation]	Used for specifying a test case documentation.
+[Tags]	Used for tagging test cases.
+[Setup]	Used for specifying a test setup.
+[Teardown]	Used for specifying a test teardown.
+[Template]	Used for specifying a template keyword.
+[Timeout]
+
+## 测试步骤
+TestStep
+- 所属用例
+- 顺序 order
+- 执行动作
+- wait_for: 等待某一条件达到再开始执行
+- skip: 跳过条件
+- ignore_error: 忽略异常
+- except_error: 期望异常
+- on_error: continue / warn / raise
+- on_fail: continue / warn / fail
+- rurun / retry/ repeat / times / loop_util: 失败/永远 执行次数 /直到
+- timeout: 超时时间
+- validate/ verify / check /assert
+- extract/ register / log  打印其中信息
+
+并行和串行
+steps
+  - step1
+  - step2 # 串行
+  - [step3, step4]  # 并行
+
+- [ ] 支持基本的关联及断言
+- [ ] 支持
+
+## 问题
+- 一个文件 一个**特性**？一个套件？一个用例？
+
+
+## 参考
+- [runnerz](https://github.com/hanzhichao/runnerz)
+- [robotframework](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html)
+- [djaong-zendao](https://github.com/hanzhichao/django_zendao/blob/main/apps/mtest/models.py)
+- [qtaf](https://qta-testbase.readthedocs.io/zh/latest/testcheck.html#id4)
