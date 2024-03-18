@@ -35,7 +35,10 @@ class Context:
         self.assert_methods = ASSERT_METHODS
 
     def get_variable(self, expr: str):
-        if isinstance(expr, str) and DOLLAR_VARIABLE.match(expr):
+        if not isinstance(expr, str):
+            return expr
+
+        if DOLLAR_VARIABLE.match(expr):
             matched = PURE_DOLLAR_VARIABLE.match(expr)
             if matched:
                 return get_field(self.variables, matched.group(1))
@@ -89,7 +92,8 @@ class Context:
 
         library_init_args = self.config.get(library_name, {}) if isinstance(self.config, dict) else {}
 
-        args, kwargs = get_args_kwargs(library_init_args)
+        args, kwargs = get_args_kwargs([], library_init_args)
+        print(args, kwargs)
         method_library = self.libraries[library_name](*args, **kwargs)
         method = getattr(method_library, method_name)
         return method

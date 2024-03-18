@@ -55,18 +55,42 @@ class StepResult:
             self.error_msg = error_msg
 
 
+def parse_step(data: str) -> dict:
+    method, *raw_args = data.split(' ')
+    args, kwargs = [], {}
+    for item in raw_args:
+        if item.strip():
+            if '=' in item:
+                key, value = item.split('=', 1)
+                if value.startswith("{") or value.startswith("["):
+                    value = eval(value)
+                kwargs[key] = value
+            else:
+                args.append(item)
+    return {
+        'method': method,
+        'args': args,
+        'kwargs': kwargs,
+    }
+
+
 class Step(schema.Step):
-    def __init__(self, method: str, args: Union[list, dict] = None, name: str = None,
+    def __init__(self, method: str, args: Union[list, dict] = None, kwargs: dict = None, name: str = None,
                  timeout: int = None, set: dict = None,
                  verify: dict = None, skip=None, **extra):
         self.method = method
-        self.args = args
+        # self.args = args
         self.name = name or method
         self.timeout = timeout
         self.set = set
         self.verify = verify
         self.skip = skip
         self.extra = extra
+
+        self.args, self.kwargs = get_args_kwargs(args, kwargs)
+
+        if self.timeout is not None:
+            assert isinstance(self.timeout, int) and self.timeout > 0, '仅支持timeout为正整数'
 
 
     @property
@@ -76,7 +100,10 @@ class Step(schema.Step):
     def _call_method(self, context: Context = None):
         context = context or Context()
         method = context.get_method(self.method)
-        args, kwargs = get_args_kwargs(self.args)
+        # 解析参数中的$变量引用
+        args = [context.get_variable(item) for item in self.args]
+        kwargs = {key: context.get_variable(value) for key, value in self.kwargs.items() if isinstance(value, str)}
+
         return method(*args, **kwargs)
 
     def call_method(self, context: Context = None):
@@ -114,8 +141,11 @@ class Step(schema.Step):
         else:
             step_result.end(status=StepStatus.PASSED, result=result)
             context.set_variable('result', result)
+
         return step_result
 
     @classmethod
-    def load(cls, data: dict):
+    def load(cls, data: Union[dict, str]):
+        if isinstance(data, str):
+            data = parse_step(data)
         return cls(**data)

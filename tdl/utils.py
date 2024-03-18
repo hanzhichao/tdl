@@ -10,12 +10,14 @@ def gen_id():
     return str(uuid.uuid4()).replace('-', '')
 
 
-def get_args_kwargs(args: Union[list, dict]):
-    if isinstance(args, list):
-        return args, {}
+def get_args_kwargs(args: Union[list, dict], kwargs: dict):
+    args = args or []
+    kwargs = kwargs or {}
+
     if isinstance(args, dict):
-        return [], args
-    return [], {}
+        kwargs.update(args)
+        args = []
+    return args, kwargs
 
 
 def do_dot(item, key: str):
