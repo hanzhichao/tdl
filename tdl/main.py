@@ -1,27 +1,30 @@
 import time
 import traceback
+import uuid
 from typing import List, Union
 
 from . import models
 from .context import Context
-from .libs import Default, Http
-import uuid
+# from .libs import Default, Http
 
-
-
-_ = Default, Http
+# _ = Default, Http
 
 
 def gen_id():
     return str(uuid.uuid4()).replace('-', '')
 
 class Env:
-    def __init__(self, name: str, config: dict = None, variables: dict = None):
+    def __init__(self, name: str, description: str = None, config: dict = None, variables: dict = None):
         self.name = name
+        self.description = description
         self.config = config
         self.variables = variables
 
         self.context = Context(config=config, variables=variables)
+
+    @classmethod
+    def load(cls, data: dict):
+        return cls(**data)
 
 
 class Step(models.Step):
@@ -47,18 +50,24 @@ class Step(models.Step):
         try:
             context = context or Context()
             method = context.get_method(self.method)
-            result = method(*self.args, **self.kwargs)
+            args = [context.get(item) for item in self.args]
+            kwargs = {key: context.get(value) for key, value in self.kwargs.items()}
+            result = method(*args, **kwargs)
+            # result = method(*self.args, **self.kwargs)
         except Exception as ex:
             self.result['is_success'] = False
             self.result['error_info'] = traceback.format_exc()
             self.result['result'] = None
+            context.set('result', None)
         else:
             self.result['is_success'] = True
             self.result['result'] = result
             self.result['error_info'] = None
             # print(self.method, '->', result)
+            context.set('result', result)
         finally:
             self.result['end_time'] = time.time()
+
         return self.result
 
     @classmethod
@@ -91,6 +100,7 @@ class TestCase(models.TestCase):
         self.result['start_time'] = time.time()
         self.result['details'] = []
         context = env.context if env else Context()
+        is_success = True
         try:
             for pre_step in self.setups or []:
                 pre_step.run(context)  # todo record details
@@ -101,13 +111,14 @@ class TestCase(models.TestCase):
             try:
                 for test_step in self.steps or []:
                     step_result = test_step.run(context)
+                    if step_result.get('is_success') is False:
+                        is_success = False
                     self.result['details'].append(step_result)
             except Exception as ex:
                 self.result['is_success'] = False
                 self.result['error_info'] = traceback.format_exc()
-                raise
             else:
-                self.result['is_success'] = True
+                self.result['is_success'] = is_success
             finally:
                 try:
                     for post_step in self.teardowns or []:  # todo record details
@@ -137,6 +148,7 @@ class Filter(models.Filter):
         self.exclude_tags = exclude_tags
         self.exclude_names = exclude_names
         self.extra = extra
+
 
 class TestResult(models.TestResult):
     pass

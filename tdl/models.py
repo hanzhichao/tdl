@@ -33,13 +33,15 @@ class Env:
         pass
 
 
-class Step(metaclass=abc.ABCMeta):
+class StepOptionMixIn:
+    excepted: Optional[List[dict]]
+    register: Optional[Dict[str, str]]
+
+
+class Step(StepOptionMixIn, metaclass=abc.ABCMeta):
     method: str
     args: Optional[Union[list, dict]]
     name: Optional[str]
-
-    excepted: Optional[List[dict]]
-    register: Optional[Dict[str, str]]
 
     def __str__(self):
         return self.name
@@ -55,22 +57,26 @@ class Step(metaclass=abc.ABCMeta):
         pass
 
 
-class BaseTest(metaclass=abc.ABCMeta):
-    name: str
-
-    description: Optional[str]
+class FilterOptionsMixIn:
     priority: Optional[int]
     status: Optional[int]
     owner: Optional[str]
     tags: Optional[List[str]]
+
+
+class RunnerOptionsMixIn:
     timeout: Optional[int]
+
+
+class BaseTest(FilterOptionsMixIn, RunnerOptionsMixIn, metaclass=abc.ABCMeta):
+    name: str
+    description: Optional[str]
     setups: Optional[List[Step]]
     teardowns: Optional[List[Step]]
 
 
 class TestCase(BaseTest):
     steps: List[Step]
-
 
     def __str__(self):
         return self.name
@@ -88,8 +94,6 @@ class TestCase(BaseTest):
     @abc.abstractmethod
     def run(self, env: Env = None):
         pass
-
-
 
 
 class Filter:

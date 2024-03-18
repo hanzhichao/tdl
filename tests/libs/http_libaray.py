@@ -15,8 +15,6 @@ class Http:
         if auth is not None:
             self._session.auth = auth
 
-
-
     def request(self, method, url, **kwargs):
         if not url.startswith('http'):
             url = '%s%s' % (self.base_url, url)
