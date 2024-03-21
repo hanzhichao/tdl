@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from . import schema
+from . import Env, schema
 from .context import Context
 from .step import Step, StepStatus
 from .testcase import TestCase, TestCaseStatus
@@ -102,7 +102,7 @@ class TestSuite(schema.TestSuite):
                  owner: str = None, tags: List[str] = None, timeout: int = None, setups: List[dict] = None,
                  teardowns: List[dict] = None, suite_setups: List[dict] = None,
                  suite_teardowns: List[dict] = None,
-                 filter: dict = None, **extra):
+                 filter: dict = None, variables: dict = None, config: dict = None, **extra):
         self.name = name
         defaults = dict(priority=priority,
                         status=status,
@@ -120,6 +120,9 @@ class TestSuite(schema.TestSuite):
         filter = filter or {}
         self.filter = Filter(tests=self.tests, **filter)
         self.extra = extra
+        self.variables = variables or {}
+
+        self.config = config or {}
 
     @property
     def id(self):
@@ -135,8 +138,15 @@ class TestSuite(schema.TestSuite):
         for post_step in self.suite_teardowns or []:
             post_step.run(context)
 
-    def run(self, env=None):
-        context = env.context if env else Context()
+    def run(self, env: Env = None):
+        env = env or Env()
+        if self.config:
+            env.config.update(self.config)
+        if self.variables:
+            env.variables.update(self.variables)
+
+        context = env.context
+
         result = TestResult(self, env.info)
         result.start()
         error_msg = self.setup(context)

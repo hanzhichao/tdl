@@ -7,6 +7,8 @@ from setuptools import setup, find_packages
 this_directory = os.path.abspath(os.path.dirname(__file__))
 setup_requirements = []
 
+VERSION = '0.3'
+
 
 def read_file(filename):
     with open(os.path.join(this_directory, filename), encoding='utf-8') as f:
@@ -34,7 +36,7 @@ setup(
     packages=find_packages(include=['tdl']),
     setup_requires=setup_requirements,
     url='https://github.com/hanzhichao/tdl',
-    version='0.2',
+    version=VERSION,
     zip_safe=True,
     install_requires=[]
 )

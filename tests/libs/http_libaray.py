@@ -5,7 +5,8 @@ from tdl.context import library
 
 @library
 class Http:
-    def __init__(self, base_url=None, params: dict=None, headers: dict=None, auth: tuple=None):
+
+    def __init__(self, base_url=None, params: dict = None, headers: dict = None, auth: tuple = None):
         self.base_url = base_url
         self._session = requests.Session()
         if params is not None:
@@ -25,3 +26,15 @@ class Http:
 
     def post(self, url, **kwargs):
         return self.request('POST', url, **kwargs)
+
+    def put(self, url, **kwargs):
+        return self.request('PUT', url, **kwargs)
+
+    def delete(self, url, **kwargs):
+        return self.request('DELETE', url, **kwargs)
+
+    def patch(self, url, **kwargs):
+        return self.request('PATCH', url, **kwargs)
+
+    def option(self, url, **kwargs):
+        return self.request('OPTION', url, **kwargs)

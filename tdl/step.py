@@ -15,6 +15,13 @@ class StepStatus:
     TIMEOUT = 4
 
 
+class StepState:
+    SETUP = 0
+    TEST = 1
+    VERIFY = 2
+    TEARDOWN = 3
+
+
 class StepResult:
     def __init__(self, step):
         self.step_id = step.id
@@ -76,15 +83,20 @@ def parse_step(data: str) -> dict:
 
 class Step(schema.Step):
     def __init__(self, method: str, args: Union[list, dict] = None, kwargs: dict = None, name: str = None,
-                 timeout: int = None, set: dict = None,
+                 order: int = None, state: int = StepState.TEST,
+                 timeout: int = None, store: dict = None,
                  verify: dict = None, skip=None, **extra):
         self.method = method
         # self.args = args
         self.name = name or method
         self.timeout = timeout
-        self.set = set
+        self.store = store
         self.verify = verify
         self.skip = skip
+
+        self.order = order
+        self.state = state
+
         self.extra = extra
 
         self.args, self.kwargs = get_args_kwargs(args, kwargs)
@@ -97,23 +109,50 @@ class Step(schema.Step):
     def id(self):
         return ''
 
-    def _call_method(self, context: Context = None):
-        context = context or Context()
-        method = context.get_method(self.method)
+    def _get_method(self, context: Context, method_expr: str):
+        if '.' in method_expr:
+            library_name, method_name = method_expr.split('.', 1)
+        else:
+            library_name, method_name = 'Default', method_expr
+
+        library_instance = context.get_library(library_name)
+        method = getattr(library_instance, method_name)
+        if hasattr(library_instance, 'NO_STORE_RESULT'):
+            setattr(self, 'NO_STORE_RESULT', True)
+
+        return method
+
+    def _call_method(self, context: Context):
+        method = self._get_method(context, self.method)
         # 解析参数中的$变量引用
         args = [context.get_variable(item) for item in self.args]
         kwargs = {key: context.get_variable(value) for key, value in self.kwargs.items() if isinstance(value, str)}
 
-        return method(*args, **kwargs)
+        result = method(*args, **kwargs)
+        if not hasattr(self, 'NO_STORE_RESULT'):
+            context.set_variable('result', result)
 
-    def call_method(self, context: Context = None):
+        if self.state == StepState.TEST:
+            prefix = 'step'
+        elif self.state == StepState.SETUP:
+            prefix = 'setup'
+        elif self.state == StepState.TEARDOWN:
+            prefix = 'teardown'
+        else:
+            raise Exception('不支持改步骤类型')
+
+        context.set_variable('%s%d' % (prefix, self.order), result)
+
+        return result
+
+    def call_method(self, context: Context):
         if self.timeout is not None and isinstance(self.timeout, int):
             return with_timeout(self.timeout)(self._call_method)(context)
         return self._call_method(context)
 
     def set_variables(self, context):
-        if self.set:
-            for key, value in self.set.items():
+        if self.store:
+            for key, value in self.store.items():
                 context.set_variable(key, value)
 
     def verify_results(self, context):
@@ -122,6 +161,7 @@ class Step(schema.Step):
                 context.verify(item)
 
     def run(self, context: Context = None) -> StepResult:
+        context = context or None
         step_result = StepResult(step=self)
         step_result.start()
 
@@ -140,12 +180,13 @@ class Step(schema.Step):
             step_result.end(status=StepStatus.TIMEOUT, error_msg=traceback.format_exc())
         else:
             step_result.end(status=StepStatus.PASSED, result=result)
-            context.set_variable('result', result)
 
         return step_result
 
     @classmethod
-    def load(cls, data: Union[dict, str]):
+    def load(cls, data: Union[dict, str], index: int = None, state: int = None):
         if isinstance(data, str):
             data = parse_step(data)
+        data['order'] = index + 1
+        data['state'] = state
         return cls(**data)

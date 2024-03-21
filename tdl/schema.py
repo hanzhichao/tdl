@@ -39,7 +39,7 @@ class Context(metaclass=abc.ABCMeta):
 
 
 class Env:
-    name: str
+    name: Optional[str]
     config: Optional[dict]
     variables: Optional[dict]
 
@@ -56,9 +56,10 @@ class Step(metaclass=abc.ABCMeta):
     method: str
     args: Optional[Union[list, dict]]
     name: Optional[str]
+    order: Optional[int]
 
     verify: Optional[List[dict]]
-    set: Optional[Dict[str, str]]
+    store: Optional[Dict[str, str]]
 
     def __str__(self):
         return self.name
@@ -88,6 +89,9 @@ class TestCase:
     owner: Optional[str]
     tags: Optional[List[str]]
     timeout: Optional[int]
+
+    config: Optional[dict]
+    variables: Optional[dict]
 
     data: Optional[List[dict]]
     data_file: Optional[str]
@@ -136,6 +140,9 @@ class TestSuite:
     timeout: Optional[int]
     setups: Optional[List[Step]]
     teardowns: Optional[List[Step]]
+
+    config: Optional[dict]
+    variables: Optional[dict]
 
     tests: List[TestCase]
     suite_setups: Optional[List[Step]]

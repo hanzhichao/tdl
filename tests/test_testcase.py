@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from tdl import TestCase
 from tdl.testcase import TestCaseStatus
 
@@ -89,4 +87,5 @@ def test_testcase_from_fasttest(env):
     testcase = TestCase.load(data)
     result = testcase.run(env)
     assert result[0].status == TestCaseStatus.PASSED
+
 

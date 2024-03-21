@@ -6,7 +6,7 @@ from typing import List, Union
 from . import schema
 from .context import Context
 from .env import Env
-from .step import Step, StepStatus
+from .step import Step, StepState, StepStatus
 from .utils import with_timeout
 
 DEFAULT_RETRY_INTERVAL = 1
@@ -119,23 +119,24 @@ class TestCase(schema.TestCase):
                  timeout: int = None, retry: List[int] = None,
                  setups: List[dict] = None,
                  teardowns: List[dict] = None, defaults: dict = None, skip=None,
-                 variables=None, data=None, **extra):
+                 variables=None, config: dict=None, data=None, **extra):
         defaults = defaults or {}
         setups = setups or defaults.get('setups')
         teardowns = teardowns or defaults.get('teardowns')
         self.name = name
-        self.steps = [Step(**item) for item in steps]
         self.description = description
         self.priority = priority or defaults.get('priority')
         self.status = status or defaults.get('status')
         self.owner = owner or defaults.get('owner')
         self.tags = tags or defaults.get('tags')
         self.timeout = timeout or defaults.get('timeout')
-        self.setups = [Step(**item) for item in setups] if setups else None
-        self.teardowns = [Step(**item) for item in teardowns] if teardowns else None
+        self.steps = [Step.load(item, index, state=StepState.TEST) for index, item in enumerate(steps)]
+        self.setups = [Step.load(item, index, state=StepState.SETUP) for index, item in enumerate(setups)] if setups else None
+        self.teardowns = [Step.load(item, index, state=StepState.TEARDOWN) for index, item in enumerate(teardowns)] if teardowns else None
         self.retry_limit, self.retry_interval = parse_retry(retry)
         self.data = data
         self.variables = variables or defaults.get('variables') or {}
+        self.config = config or {}
 
         self.skip = skip or defaults.get('skip')
 
@@ -152,6 +153,15 @@ class TestCase(schema.TestCase):
             post_step.run(context)
 
     def _run(self, test_record, env: Env = None) -> TestRecord:
+
+        env = env or Env()
+        if self.config:
+            env.config.update(self.config)
+        if self.variables:
+            env.variables.update(self.variables)
+
+        context = env.context
+
         context = env.context if env else Context()
 
         context.variables.update(self.variables)
@@ -215,7 +225,9 @@ class TestCase(schema.TestCase):
 
     def _run_with_data_timeout_and_retry(self, env=None) -> List[TestCaseResult]:
         results = []
-        for item in self.data:
+        data = env.context.get_variable(self.data)
+
+        for item in data:
             testcase = copy.copy(self)
             testcase.variables.update(item)
             subfix = '-'.join(map(str, item.values()))

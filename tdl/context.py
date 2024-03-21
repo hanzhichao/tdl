@@ -69,7 +69,7 @@ class Context:
     def verify(self, item: dict):
         for method_name, method_args in item.items():
             method = self.get_assert_method(method_name)
-            args, kwargs = get_args_kwargs(method_args)
+            args, kwargs = get_args_kwargs(method_args, {})
 
             args = [self.get_variable(arg) for arg in args]  # actual, excepted
             kwargs = {key: self.get_variable(value) for key, value in kwargs.items()}
@@ -84,19 +84,11 @@ class Context:
     def get_assert_method(self, method_name: str):
         return self.assert_methods.get(method_name)
 
-    def get_method(self, method_expr: str):
-        if '.' in method_expr:
-            library_name, method_name = method_expr.split('.', 1)
-        else:
-            library_name, method_name = 'Default', method_expr
-
+    def get_library(self, library_name: str):
         library_init_args = self.config.get(library_name, {}) if isinstance(self.config, dict) else {}
-
         args, kwargs = get_args_kwargs([], library_init_args)
-        print(args, kwargs)
-        method_library = self.libraries[library_name](*args, **kwargs)
-        method = getattr(method_library, method_name)
-        return method
+        library_instance = self.libraries[library_name](*args, **kwargs)
+        return library_instance
 
 
 library = Context.register_library

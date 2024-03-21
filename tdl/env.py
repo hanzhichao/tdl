@@ -3,12 +3,14 @@ from .context import Context
 
 
 class Env(schema.Env):
-    def __init__(self, name: str, config: dict = None, variables: dict = None):
+    def __init__(self, name: str = None, config: dict = None, variables: dict = None):
         self.name = name
-        self.config = config
-        self.variables = variables
+        self.config = config or {}
+        self.variables = variables or {}
 
-        self.context = Context(config=config, variables=variables)
+    @property
+    def context(self) -> Context:
+        return Context(config=self.config, variables=self.variables)
 
     @property
     def info(self):
